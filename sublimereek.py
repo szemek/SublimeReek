@@ -25,5 +25,27 @@ class SublimeReek(sublime_plugin.EventListener):
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
         output, errors = process.communicate()
         smells = json.loads(output.decode('ascii'))
+
+        self.clear_regions(view)
+
+        print('Reek:')
         for smell in smells:
-            print("%s:%s %s (%s)" % (smell['lines'], smell['name'], smell['message'], smell['smell_type']))
+            lines = smell['lines']
+            context = smell['context']
+            message = smell['message']
+            smell_type = smell['smell_type']
+            print("%s:%s %s (%s)" % (lines, context, message, smell_type))
+
+            for line in lines:
+                self.mark_line(view, line)
+
+    def mark_line(self, view, line):
+        scope = 'variable.parameter'
+        point = view.text_point(int(line) - 1, 0)
+        region = view.full_line(point)
+        view.add_regions('line_%s' % line, [region], scope, 'dot', sublime.HIDDEN | sublime.PERSISTENT)
+
+    def clear_regions(self, view):
+        lines, _ = view.rowcol(view.size())
+        for line in range(lines):
+            view.erase_regions('line_%s' % (line + 1))
